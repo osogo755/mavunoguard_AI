@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.venv/
+env/
+venv/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Builds & Outputs
+dist/
+build/
+*.cjs
+*.js.map
+coverage/
+uploads/
+*.sqlite3
+*.db
+local database files/
+
+# System & Editor
+.DS_Store
+*.log
+.vscode/
+.idea/

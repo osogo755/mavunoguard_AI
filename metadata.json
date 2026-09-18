@@ -1,0 +1,6 @@
+{
+  "name": "MavunoGuard AI",
+  "description": "AI-powered climate-risk, crop-monitoring, and agricultural decision-support platform for smallholder farmers with satellite vegetation monitoring and offline capability.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
