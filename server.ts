@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
@@ -964,6 +965,17 @@ app.post('/api/sync', (req: Request, res: Response) => {
     failed: 0,
     synced_at: new Date().toISOString()
   });
+});
+
+// Codebase ZIP download endpoint
+app.get('/api/download/codebase.zip', (req: Request, res: Response) => {
+  const zipPath = path.join(process.cwd(), 'public', 'mavunoguard-codebase.zip');
+  if (fs.existsSync(zipPath)) {
+    res.setHeader('Content-Disposition', 'attachment; filename="mavunoguard-codebase.zip"');
+    res.setHeader('Content-Type', 'application/zip');
+    return res.sendFile(zipPath);
+  }
+  res.status(404).json({ error: 'Zip file not generated yet' });
 });
 
 // Start Express server + Vite middleware

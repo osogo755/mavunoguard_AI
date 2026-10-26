@@ -10,7 +10,9 @@ import {
   HardDrive, 
   User, 
   Wifi, 
-  Layers
+  Layers,
+  Download,
+  FileCode2
 } from 'lucide-react';
 import { SystemConfig, Language } from '../types';
 import { getT } from '../lib/i18n';
@@ -172,6 +174,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </span>
               </div>
 
+            </div>
+          </div>
+
+          {/* Project Codebase Export */}
+          <div>
+            <h4 className="font-semibold uppercase tracking-wider text-stone-500 text-[11px] mb-2">
+              Full Application Codebase
+            </h4>
+            <div className="p-3.5 bg-emerald-50/80 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-1.5 font-bold text-stone-900 text-xs">
+                  <FileCode2 className="w-4 h-4 text-emerald-700" />
+                  <span>MavunoGuard AI Source Code (.ZIP)</span>
+                </div>
+                <p className="text-[11px] text-stone-600 mt-0.5">
+                  Complete archive with React/TypeScript frontend, Python FastAPI backend, risk algorithms, Supabase schemas, PWA assets, and test suite.
+                </p>
+              </div>
+              <a
+                href="/api/download/codebase.zip"
+                download="mavunoguard-codebase.zip"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-semibold text-xs transition-colors shrink-0 shadow-xs"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download .ZIP</span>
+              </a>
             </div>
           </div>
 
