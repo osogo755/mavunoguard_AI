@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Gracefully prevent unhandled WebSocket rejection notices in sandboxed iframe environments
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event && event.reason && (
+          (typeof event.reason.message === 'string' && event.reason.message.includes('WebSocket closed without opened')) ||
+          (typeof event.reason === 'string' && event.reason.includes('WebSocket closed without opened'))
+        )) {
+          event.preventDefault();
+        }
+      });
+    </script>
     <title>MavunoGuard AI - Protect Your Harvest With AI</title>
     <meta name="description" content="MavunoGuard AI combines weather intelligence, satellite vegetation monitoring and AI-powered agricultural advice to help farmers make better decisions." />
     <meta property="og:title" content="MavunoGuard AI - Protect Your Harvest With AI" />
