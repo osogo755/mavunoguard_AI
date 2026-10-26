@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#08783b">
+<meta name="description" content="MavunoGuard AI — climate risk and crop advisory for smallholder farmers.">
+<title>MavunoGuard AI</title>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--green:#08783b;--green2:#12a64b;--dark:#063b22;--light:#f4faf6;--muted:#68736d;--line:#dce8df;--orange:#f39c12;--red:#d93636;--white:#fff}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eef5f0;color:#17231c}
+button,input,select{font:inherit} button{cursor:pointer}
+.app{min-height:100vh}.top{background:linear-gradient(135deg,#064426,#0b8b42);color:white;padding:18px 20px 22px;position:sticky;top:0;z-index:20}
+.topbar{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between}.brand{font-size:22px;font-weight:800}.brand span{color:#8be39e}.tag{font-size:12px;opacity:.82;margin-top:2px}
+.container{max-width:1100px;margin:0 auto;padding:22px 16px 45px}.hero{background:linear-gradient(135deg,#f9fffb,#e8f8ec);border:1px solid var(--line);border-radius:24px;padding:28px;margin-bottom:18px}.hero h1{margin:0 0 8px;font-size:32px;color:var(--dark)}.hero p{max-width:700px;color:#4d5d53;line-height:1.6}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}.card{background:white;border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 8px 25px #073b2210}.card h2,.card h3{margin-top:0}.steps{display:flex;gap:8px;overflow:auto;margin-bottom:18px}.step{min-width:100px;padding:9px 12px;border-radius:999px;background:#edf2ee;color:#66736b;font-size:13px;text-align:center}.step.active{background:#dff5e5;color:var(--green);font-weight:700}.step.done{background:#08783b;color:#fff}
+.form-step{display:none}.form-step.active{display:block}.label{display:block;font-weight:700;font-size:14px;margin:15px 0 7px}.hint{font-size:12px;color:var(--muted);margin-top:4px}
+input,select{width:100%;border:1px solid #cedbd1;border-radius:12px;padding:12px 13px;background:#fff;outline:none}input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 3px #08783b18}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{border:1px solid var(--line);background:white;border-radius:12px;padding:10px 12px;font-size:13px}.chip.selected{border-color:var(--green);background:#e9f8ed;color:var(--green);font-weight:700}
+.actions{display:flex;justify-content:space-between;gap:10px;margin-top:22px}.btn{border:0;border-radius:12px;padding:12px 18px;font-weight:800}.primary{background:var(--green);color:white}.secondary{background:#eef3ef;color:#26352c}.ghost{background:white;border:1px solid var(--line);color:#26352c}
+#map{height:320px;border-radius:15px;overflow:hidden;margin-bottom:10px}.location-line{background:#f5f8f6;border:1px solid var(--line);padding:10px 12px;border-radius:11px;font-size:13px}
+.photo{border:2px dashed #c8d9cd;border-radius:15px;padding:16px;text-align:center;background:#fbfefc}.photo img{max-width:100%;max-height:180px;border-radius:12px;display:none;margin:10px auto}
+.dashboard{display:none}.dashboard.show{display:block}.risk{border:1px solid var(--line);border-radius:18px;padding:18px;background:linear-gradient(135deg,#fff,#f8fbf9)}.risk-main{display:flex;align-items:center;gap:18px}.gauge{width:105px;height:105px;border-radius:50%;background:conic-gradient(var(--orange) 0 68%,#e8eee9 68% 100%);display:grid;place-items:center;position:relative}.gauge:after{content:"";width:78px;height:78px;border-radius:50%;background:#fff;position:absolute}.gauge b{position:relative;z-index:1;font-size:22px}.risk-title{font-size:24px;font-weight:900;color:#d97706}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}.metric{padding:12px;border:1px solid var(--line);border-radius:12px;text-align:center}.metric small{display:block;color:var(--muted)}.metric strong{display:block;margin-top:5px}.warning{margin-top:14px;padding:13px;border-radius:12px;background:#fff5df;border:1px solid #f2d49c;color:#704c09}.recommend{padding-left:0;list-style:none}.recommend li{padding:9px 0;border-bottom:1px solid #edf1ee}.recommend li:last-child{border-bottom:0}.num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:800;margin-right:8px}
+.note{text-align:center;color:#748078;font-size:11px;margin-top:20px}.status{padding:10px 12px;border-radius:11px;background:#eaf7ee;color:#176536;font-size:13px;display:none;margin-bottom:12px}.small{font-size:12px;color:var(--muted)}.hidden{display:none!important}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.hero h1{font-size:26px}.row{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr 1fr}.top{position:relative}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <div class="topbar">
+    <div><div class="brand">MavunoGuard <span>AI</span></div><div class="tag">Protect your harvest. Grow with confidence.</div></div>
+    <button class="btn ghost" style="padding:8px 12px" onclick="resetApp()">Reset</button>
+  </div>
+</header>
+
+<main class="container">
+<section class="hero">
+  <h1>Climate intelligence for your farm.</h1>
+  <p>MavunoGuard AI combines farmer observations with location, crop and environmental indicators to provide an easy-to-understand climate risk assessment and practical next steps.</p>
+  <div class="small">Prototype MVP • Risk results are demonstrations, not agronomic diagnoses.</div>
+</section>
+
+<div id="status" class="status"></div>
+
+<section id="formCard" class="card">
+  <div class="steps">
+    <div class="step active" id="s1">1. Farm</div><div class="step" id="s2">2. Crop</div><div class="step" id="s3">3. Farm Info</div><div class="step" id="s4">4. Condition</div>
+  </div>
+
+  <div class="form-step active" id="step1">
+    <h2>1. My Farm</h2><p class="small">Pin the farm so the system can associate it with local environmental information.</p>
+    <div id="map"></div>
+    <div class="location-line" id="locationText">Tap the map or use your current location.</div>
+    <button class="btn secondary" style="margin-top:10px" onclick="locateMe()">📍 Use my current location</button>
+    <label class="label">Farm name <span class="small">(optional)</span></label><input id="farmName" placeholder="e.g. Shalom Farm">
+    <div class="row"><div><label class="label">Farm size</label><input id="farmSize" type="number" min="0" step="0.1" placeholder="0.5"></div><div><label class="label">Unit</label><select id="farmUnit"><option>Acres</option><option>Hectares</option></select></div></div>
+    <div class="actions"><span></span><button class="btn primary" onclick="next(2)">Continue →</button></div>
+  </div>
+
+  <div class="form-step" id="step2">
+    <h2>2. Crop Details</h2>
+    <label class="label">What are you growing?</label>
+    <select id="crop"><option value="maize">🌽 Maize</option><option value="beans">🫘 Beans</option><option value="sorghum">🌾 Sorghum</option><option value="vegetables">🥬 Vegetables</option><option value="banana">🍌 Banana</option></select>
+    <label class="label">Crop variety <span class="small">(optional)</span></label><input id="variety" placeholder="e.g. H614">
+    <label class="label">When did you plant?</label><input id="plantDate" type="date">
+    <label class="label">Expected harvest date <span class="small">(optional)</span></label><input id="harvestDate" type="date">
+    <div class="actions"><button class="btn secondary" onclick="next(1)">← Back</button><button class="btn primary" onclick="next(3)">Continue →</button></div>
+  </div>
+
+  <div class="form-step" id="step3">
+    <h2>3. Farm Information</h2>
+    <label class="label">Soil type</label><div class="chips" data-group="soil"><button class="chip" onclick="pick(this)">Sandy</button><button class="chip" onclick="pick(this)">Clay</button><button class="chip" onclick="pick(this)">Loamy</button><button class="chip" onclick="pick(this)">Black soil</button><button class="chip" onclick="pick(this)">Red soil</button><button class="chip" onclick="pick(this)">I don't know</button></div>
+    <label class="label">How is drainage?</label><div class="chips" data-group="drain"><button class="chip" onclick="pick(this)">Good</button><button class="chip" onclick="pick(this)">Moderate</button><button class="chip" onclick="pick(this)">Poor</button><button class="chip" onclick="pick(this)">I don't know</button></div>
+    <label class="label">Does the farm normally experience flooding?</label><div class="chips" data-group="flood"><button class="chip" onclick="pick(this)">Never</button><button class="chip" onclick="pick(this)">Occasionally</button><button class="chip" onclick="pick(this)">Frequently</button></div>
+    <label class="label">Is the farm on a slope?</label><div class="chips" data-group="slope"><button class="chip" onclick="pick(this)">Flat</button><button class="chip" onclick="pick(this)">Gentle</button><button class="chip" onclick="pick(this)">Steep</button><button class="chip" onclick="pick(this)">I don't know</button></div>
+    <div class="actions"><button class="btn secondary" onclick="next(2)">← Back</button><button class="btn primary" onclick="next(4)">Continue →</button></div>
+  </div>
+
+  <div class="form-step" id="step4">
+    <h2>4. Current Condition</h2>
+    <label class="label">How does your crop currently look?</label><div class="chips" data-group="health"><button class="chip" onclick="pick(this)">🟢 Healthy</button><button class="chip" onclick="pick(this)">🟡 Slightly stressed</button><button class="chip" onclick="pick(this)">🟠 Poor</button><button class="chip" onclick="pick(this)">🔴 Severely stressed</button></div>
+    <label class="label">What problems have you noticed?</label><div class="chips multi" data-group="problems">
+      <button class="chip" onclick="toggleMulti(this)">Yellowing leaves</button><button class="chip" onclick="toggleMulti(this)">Wilting</button><button class="chip" onclick="toggleMulti(this)">Stunted growth</button><button class="chip" onclick="toggleMulti(this)">Waterlogging</button><button class="chip" onclick="toggleMulti(this)">Dry soil</button><button class="chip" onclick="toggleMulti(this)">Pests</button><button class="chip" onclick="toggleMulti(this)">Disease symptoms</button><button class="chip" onclick="toggleMulti(this)">Weeds</button><button class="chip" onclick="toggleMulti(this)">Poor germination</button><button class="chip" onclick="toggleMulti(this)">No obvious problem</button>
+    </div>
+    <label class="label">When did you first notice the problem?</label><select id="noticed"><option>Today</option><option>1–3 days ago</option><option>4–7 days ago</option><option>More than a week ago</option></select>
+    <label class="label">Upload a crop photo <span class="small">(optional)</span></label>
+    <div class="photo"><input id="photo" type="file" accept="image/*" onchange="previewPhoto(event)"><img id="photoPreview"><div class="small">A photo can support future computer-vision screening.</div></div>
+    <div class="actions"><button class="btn secondary" onclick="next(3)">← Back</button><button class="btn primary" onclick="analyze()">Analyze my farm ✨</button></div>
+  </div>
+</section>
+
+<section id="dashboard" class="dashboard" style="margin-top:18px">
+  <div class="grid">
+    <div class="card">
+      <h2>Farm Risk Dashboard</h2>
+      <div class="small" id="summary"></div>
+      <div class="risk" style="margin-top:15px">
+        <div class="risk-main"><div class="gauge"><b id="score">68</b></div><div><div class="risk-title" id="riskTitle">MODERATE–HIGH</div><div class="small">Prototype confidence: <b id="confidence">82%</b></div></div></div>
+        <div class="metrics"><div class="metric"><small>Drought</small><strong id="drought">HIGH</strong></div><div class="metric"><small>Flood</small><strong id="floodRisk">LOW</strong></div><div class="metric"><small>Crop stress</small><strong id="cropStress">MODERATE</strong></div></div>
+      </div>
+      <div class="warning"><b>⚠️ Early warning</b><br><span id="warning"></span></div>
+    </div>
+    <div class="card">
+      <h2>Why this result?</h2><p id="why" style="line-height:1.6"></p>
+      <h3>Recommended actions</h3><ol class="recommend" id="recommend"></ol>
+      <button class="btn primary" onclick="window.scrollTo({top:0,behavior:'smooth'})">Run another assessment</button>
+    </div>
+  </div>
+</section>
+
+<div class="note">designed by mikeajanja#ajanjalabs</div>
+</main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let current=1, marker=null, lat=-0.6817, lng=34.7660;
+const map=L.map('map').setView([lat,lng],11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+function setMarker(a,b){lat=a;lng=b;if(marker)map.removeLayer(marker);marker=L.marker([lat,lng]).addTo(map);map.setView([lat,lng],14);document.getElementById('locationText').innerHTML='<b>Farm location:</b> '+lat.toFixed(5)+'°, '+lng.toFixed(5)+'°';}
+map.on('click',e=>setMarker(e.latlng.lat,e.latlng.lng));
+setMarker(lat,lng);
+function locateMe(){if(!navigator.geolocation){alert('Location is not available in this browser.');return}navigator.geolocation.getCurrentPosition(p=>setMarker(p.coords.latitude,p.coords.longitude),()=>alert('Could not get your location. You can pin the farm on the map instead.'))}
+function next(n){current=n;document.querySelectorAll('.form-step').forEach(x=>x.classList.remove('active'));document.getElementById('step'+n).classList.add('active');for(let i=1;i<=4;i++){let s=document.getElementById('s'+i);s.className='step '+(i<n?'done ':'')+(i===n?'active':'')}window.scrollTo({top:document.getElementById('formCard').offsetTop-10,behavior:'smooth'})}
+function pick(el){el.parentElement.querySelectorAll('.chip').forEach(x=>x.classList.remove('selected'));el.classList.add('selected')}
+function toggleMulti(el){el.classList.toggle('selected')}
+function previewPhoto(e){const f=e.target.files[0],img=document.getElementById('photoPreview');if(f){img.src=URL.createObjectURL(f);img.style.display='block'}}
+function selected(group){const el=document.querySelector('[data-group="'+group+'"] .selected');return el?el.textContent:''}
+function analyze(){
+ const crop=document.getElementById('crop').value, plant=document.getElementById('plantDate').value, soil=selected('soil'),drain=selected('drain'),flood=selected('flood'),slope=selected('slope'),health=selected('health');
+ if(!plant){alert('Please enter the planting date.');return}
+ let score=42, reasons=[], rec=[];
+ if(drain.includes('Poor')){score+=15;reasons.push('poor drainage');rec.push('Inspect low-lying areas and improve drainage where practical.')}
+ if(flood.includes('Frequently')){score+=12;reasons.push('frequent flooding history');rec.push('Monitor flood-prone parts of the farm and keep drainage channels clear.')}
+ if(flood.includes('Occasionally')){score+=5;reasons.push('occasional flooding history')}
+ if(health.includes('Poor')){score+=12;reasons.push('poor current crop condition')}
+ if(health.includes('Severely')){score+=18;reasons.push('severe crop stress')}
+ if(health.includes('Slightly')){score+=7;reasons.push('visible crop stress')}
+ const probs=[...document.querySelectorAll('[data-group="problems"] .selected')].map(x=>x.textContent);
+ if(probs.some(x=>x.includes('Waterlogging'))){score+=12;reasons.push('reported waterlogging');rec.push('Check for standing water and avoid unnecessary irrigation.')}
+ if(probs.some(x=>x.includes('Dry soil'))){score+=12;reasons.push('reported dry soil');rec.push('Conserve available soil moisture and monitor the crop closely.')}
+ if(probs.some(x=>x.includes('Yellowing'))){score+=5;reasons.push('yellowing leaves');rec.push('Inspect affected leaves and seek local agronomic advice if symptoms persist.')}
+ if(probs.some(x=>x.includes('Wilting'))){score+=6;reasons.push('wilting');}
+ if(!rec.length)rec=['Continue regular field monitoring and record changes in crop condition.','Check local weather forecasts before major farm operations.','Reassess the farm after significant rainfall or a prolonged dry spell.'];
+ score=Math.min(94,Math.max(28,score));
+ let title=score>=75?'HIGH':score>=60?'MODERATE–HIGH':score>=45?'MODERATE':'LOW–MODERATE';
+ document.getElementById('score').textContent=score;
+ document.getElementById('riskTitle').textContent=title;
+ document.getElementById('confidence').textContent=Math.min(91,70+Math.round(score/6))+'%';
+ document.getElementById('drought').textContent=probs.some(x=>x.includes('Dry soil'))?'HIGH':score>65?'MODERATE':'LOW';
+ document.getElementById('floodRisk').textContent=(flood.includes('Frequently')||probs.some(x=>x.includes('Waterlogging')))?'HIGH':flood.includes('Occasionally')?'MODERATE':'LOW';
+ document.getElementById('cropStress').textContent=health.includes('Severely')?'HIGH':health.includes('Poor')?'MODERATE–HIGH':health.includes('Slightly')?'MODERATE':'LOW';
+ document.getElementById('summary').textContent=(document.getElementById('farmName').value||'Your farm')+' • '+document.getElementById('crop').selectedOptions[0].text+' • planted '+plant;
+ document.getElementById('why').textContent='The prototype risk engine combines your farm inputs with environmental indicators that a production version would obtain automatically from weather, satellite and GIS data. In this assessment, the main reported factors are '+(reasons.length?reasons.join(', '):'limited reported stress indicators')+'.';
+ document.getElementById('warning').textContent=score>=65?'Conditions reported for this farm suggest elevated climate-related crop risk. Monitor closely and act early.':'No major elevated risk was detected from the information provided. Continue monitoring for changes.';
+ document.getElementById('recommend').innerHTML=rec.slice(0,4).map((x,i)=>'<li><span class="num">'+(i+1)+'</span>'+x+'</li>').join('');
+ document.getElementById('dashboard').classList.add('show');
+ document.getElementById('status').style.display='block';document.getElementById('status').textContent='Assessment complete. This is a hackathon prototype; production predictions will require validated datasets and models.';
+ window.scrollTo({top:document.getElementById('dashboard').offsetTop-10,behavior:'smooth'});
+}
+function resetApp(){location.reload()}
+</script>
+</body>
+</html>

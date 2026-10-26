@@ -1,50 +1,5 @@
-const CACHE_NAME = 'mavunoguard-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon.svg',
-  '/apple-touch-icon.png'
-];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', (event) => {
-  // Only cache GET requests, skip API routes for fresh fetches
-  if (event.request.method !== 'GET') return;
-  if (event.request.url.includes('/api/')) return;
-
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).catch(() => {
-        // Offline fallback to root
-        return caches.match('/');
-      });
-    })
-  );
-});
+const APP='mavunoguard-app-v8';const MAP='mavunoguard-map-v2';
+self.addEventListener('install',e=>e.waitUntil(caches.open(APP).then(c=>c.addAll(['/','/static/index.html','/static/manifest.webmanifest','/static/icons/icon-192.png','/static/icons/icon-512.png','/static/icons/icon-maskable-512.png','/static/favicon.png','/static/apple-touch-icon.png']))));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('mavunoguard-app-')&&k!==APP).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.origin===location.origin && u.pathname.startsWith('/api/')){return}if(u.origin===location.origin){if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(APP).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request).then(x=>x||caches.match('/'))));return}e.respondWith(caches.match(e.request).then(x=>x||fetch(e.request).then(r=>{const copy=r.clone();caches.open(APP).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match('/'))));return}if(u.hostname.includes('tile.openstreetmap.org')){e.respondWith(caches.open(MAP).then(async c=>{const hit=await c.match(e.request);if(hit)return hit;try{const r=await fetch(e.request,{mode:'no-cors'});c.put(e.request,r.clone());return r}catch{return new Response('',{status:503})}}))}});
+self.addEventListener('message',async e=>{if(e.data?.type!=='CACHE_MAP')return;const {lat,lng}=e.data;const tiles=[];for(const z of [12,13,14]){const n=2**z;const x=Math.floor((lng+180)/360*n);const y=Math.floor((1-Math.asinh(Math.tan(lat*Math.PI/180))/Math.PI)/2*n);for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){const xx=(x+dx+n)%n,yy=Math.max(0,Math.min(n-1,y+dy));for(const s of ['a','b','c'])tiles.push(`https://${s}.tile.openstreetmap.org/${z}/${xx}/${yy}.png`)}}const c=await caches.open(MAP);await Promise.allSettled(tiles.map(u=>fetch(u,{mode:'no-cors'}).then(r=>c.put(u,r))));self.clients.matchAll().then(cs=>cs.forEach(c=>c.postMessage({type:'MAP_SAVED',count:tiles.length})))})

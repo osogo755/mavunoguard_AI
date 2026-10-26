@@ -1,175 +1,140 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Dict, Any
-from datetime import date, datetime
+from pydantic import BaseModel, EmailStr, field_validator
+from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import Optional
 
-class UserProfile(BaseModel):
-    id: str
-    full_name: Optional[str] = None
+
+class RegisterRequest(BaseModel):
+    """Registration payload.
+
+    Phone is the primary identifier. Email and password are both optional —
+    farmers can register with phone + OTP only. If no password is supplied
+    a stable phone-derived placeholder is used internally so Supabase Auth
+    can store the account; the user always logs in via OTP in that case.
+    """
+    username: str
+    password: Optional[str] = None   # optional — omit to use phone-OTP-only auth
     email: Optional[str] = None
     phone: Optional[str] = None
-    location: Optional[str] = None
-    preferred_language: str = "en"
-    avatar_url: Optional[str] = None
 
-class FarmBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    latitude: float = Field(..., ge=-90.0, le=90.0)
-    longitude: float = Field(..., ge=-180.0, le=180.0)
-    size: float = Field(..., gt=0.0)
-    unit: str = Field("acres", pattern="^(acres|hectares)$")
-    crop: str = Field(..., min_length=1)
+    @field_validator("username")
+    @classmethod
+    def username_min_length(cls, v: str) -> str:
+        if len(v.strip()) < 2:
+            raise ValueError("Username must be at least 2 characters.")
+        return v.strip()
+
+    @field_validator("password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if v is not None and len(v) < 6:
+            raise ValueError("Password must be at least 6 characters.")
+        return v
+
+
+class LoginRequest(BaseModel):
+    """Login payload — accepts email + password.
+
+    `username` is kept for backwards compatibility; if `email` is provided
+    it takes priority over `username`.
+    """
+    email: Optional[str] = None   # preferred: the real email address
+    username: str = ""            # fallback / legacy field
+    password: str
+
+
+class GoogleAuthRequest(BaseModel):
+    """Google One-Tap / GIS credential (JWT ID token)."""
+    credential: str
+
+class FarmRequest(BaseModel):
+    farm_name: str = "My Farm"
+    latitude: float
+    longitude: float
+    farm_size: Optional[float] = None
+    farm_unit: str = "Acres"
+    crop: str = "maize"
     variety: Optional[str] = None
-    planting_date: Optional[date] = None
-    expected_harvest_date: Optional[date] = None
-    soil_type: Optional[str] = "loam"
-    drainage: Optional[str] = "moderate"
-    flood_history: Optional[str] = "never"
-    slope: Optional[str] = "gentle"
-    crop_health: Optional[str] = "good"
-    current_problems: List[str] = Field(default_factory=list)
-    notes: Optional[str] = None
-
-class FarmCreate(FarmBase):
-    pass
-
-class FarmUpdate(BaseModel):
-    name: Optional[str] = None
-    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
-    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
-    size: Optional[float] = Field(None, gt=0.0)
-    unit: Optional[str] = None
-    crop: Optional[str] = None
-    variety: Optional[str] = None
-    planting_date: Optional[date] = None
-    expected_harvest_date: Optional[date] = None
-    soil_type: Optional[str] = None
+    planting_date: str
+    harvest_date: Optional[str] = None
+    soil: Optional[str] = None
     drainage: Optional[str] = None
     flood_history: Optional[str] = None
     slope: Optional[str] = None
-    crop_health: Optional[str] = None
-    current_problems: Optional[List[str]] = None
-    notes: Optional[str] = None
+    health: Optional[str] = None
+    problems: List[str] = []
+    noticed: Optional[str] = None
 
-class Farm(FarmBase):
-    id: str
-    user_id: str
-    created_at: datetime
-    updated_at: datetime
+class AnalyzeRequest(FarmRequest):
+    use_ai: bool = True
 
-class FarmObservationCreate(BaseModel):
-    farm_id: str
-    crop_health: Optional[str] = "good"
-    soil_moisture_visual: Optional[str] = "moderate"
-    pest_signs: bool = False
-    disease_signs: bool = False
-    notes: Optional[str] = None
-    image_url: Optional[str] = None
 
-class FarmObservation(FarmObservationCreate):
-    id: str
-    user_id: str
-    observation_date: datetime
-    created_at: datetime
+class ClinicRequest(BaseModel):
+    """Payload for the AI Clinic image-diagnosis endpoint.
 
-class WeatherDaily(BaseModel):
-    date: str
-    temp_max: float
-    temp_min: float
-    precipitation: float
-    precipitation_probability: Optional[float] = 0.0
-    weather_code: int
+    The image is transmitted as a base64-encoded string so the endpoint
+    works as a standard JSON POST — no multipart form required.
+    """
+    image_b64: str                          # base64-encoded image, no data-URI prefix
+    mime_type: str = "image/jpeg"           # image/jpeg | image/png | image/webp
+    category: str = "crop"                 # crop | animal | produce | soil
+    description: str = ""                  # farmer's description of the problem
+    location: Optional[str] = None         # e.g. "Western Kenya, 1800 m altitude"
+    crop_or_animal: Optional[str] = None   # e.g. "maize", "dairy cow", "tomatoes"
 
-class WeatherData(BaseModel):
-    latitude: float
-    longitude: float
-    current_temp: float
-    current_weather_code: int
-    current_condition: str
-    soil_moisture: Optional[float] = None
-    daily: List[WeatherDaily]
-    rainfall_7d: float
-    rainfall_14d: float
-    provider: str
-    source_status: str  # "Live" | "Cached" | "Unavailable"
-    last_updated: datetime
+    @field_validator("category")
+    @classmethod
+    def valid_category(cls, v: str) -> str:
+        allowed = {"crop", "animal", "produce", "soil"}
+        if v.lower() not in allowed:
+            raise ValueError(f"category must be one of: {', '.join(sorted(allowed))}")
+        return v.lower()
 
-class SatelliteNDVI(BaseModel):
-    configured: bool
-    status_message: str
-    latest_ndvi: Optional[float] = None
-    ndvi_trend: Optional[str] = None
-    observation_date: Optional[str] = None
-    cloud_cover: Optional[float] = None
-    vigor_interpretation: Optional[str] = None
-    source: str = "Copernicus Sentinel-2 L2A"
-    status: str  # "Live" | "Cached" | "Not Configured" | "Temporarily Unavailable"
+    @field_validator("mime_type")
+    @classmethod
+    def valid_mime(cls, v: str) -> str:
+        allowed = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+        if v.lower() not in allowed:
+            return "image/jpeg"  # safe default
+        return v.lower()
 
-class RiskEngineResult(BaseModel):
-    overall_score: int = Field(..., ge=0, le=100)
-    risk_level: str  # "LOW" | "MODERATE" | "MODERATE-HIGH" | "HIGH"
-    drought_risk: int = Field(..., ge=0, le=100)
-    flood_risk: int = Field(..., ge=0, le=100)
-    crop_stress: int = Field(..., ge=0, le=100)
-    reasons: List[str]
-    recommended_actions: List[str]
-    watch_next: List[str]
+    @field_validator("image_b64")
+    @classmethod
+    def image_not_empty(cls, v: str) -> str:
+        if not v or len(v) < 100:
+            raise ValueError("image_b64 must contain a valid base64-encoded image.")
+        return v
 
-class AIAdvice(BaseModel):
-    headline: str
-    explanation: str
-    actions: List[str]
-    watch_next: List[str]
-    confidence_note: str
-    provider: str  # "Google Gemini" | "OpenAI Fallback" | "Deterministic Rule-Based"
-    language: str = "en"
+class VerifyOtpRequest(BaseModel):
+    """OTP verification payload.
 
-class AnalysisReport(BaseModel):
-    id: Optional[str] = None
-    farm_id: str
-    farm_name: str
-    created_at: datetime
-    overall_score: int
-    risk_level: str
-    drought_risk: int
-    flood_risk: int
-    crop_stress: int
-    ndvi: Optional[float] = None
-    ndvi_trend: Optional[str] = None
-    reasons: List[str]
-    recommended_actions: List[str]
-    watch_next: List[str]
-    ai_headline: Optional[str] = None
-    ai_explanation: Optional[str] = None
-    ai_provider: str
-    weather_source: str
-    satellite_source: str
-    weather_summary: Optional[Dict[str, Any]] = None
+    mode="register" (default) — verify OTP then create a new account.
+    mode="login"              — verify OTP then return a session for an existing account.
+    """
+    phone: str
+    otp: str
+    # Required for registration; ignored when mode="login"
+    username: Optional[str] = None
+    password: Optional[str] = None
+    email: Optional[str] = None
+    mode: str = "register"   # "register" | "login"
 
-class AnalyzeRequest(BaseModel):
-    farm_id: Optional[str] = None
-    farm: Optional[FarmBase] = None
-    farmer_observations: Optional[List[str]] = None
-    language: Optional[str] = "en"
 
-class GeoImportResult(BaseModel):
-    success: bool
-    format: str
-    latitude: float
-    longitude: float
-    point_count: int = 1
-    message: str
+class PhoneLoginRequest(BaseModel):
+    """Kick off a passwordless phone-OTP login flow."""
+    phone: str
+class TranslationRequest(BaseModel):
+    text: str = Field(..., description="The agronomic text or question to translate")
+    target_language: str = Field("sw", description="Target language code ('sw' or 'en')")
+    source_language: Optional[str] = Field("auto", description="Source language code")
 
-class SyncItem(BaseModel):
-    entity_type: str
-    entity_id: Optional[str] = None
-    operation: str
-    payload: Dict[str, Any]
+class TranslationResponse(BaseModel):
+    original_text: str
+    translated_text: str
+    target_language: str
+    source_language: str
 
-class SyncRequest(BaseModel):
-    items: List[SyncItem]
-
-class SyncResponse(BaseModel):
-    success: bool
-    processed: int
-    failed: int
-    errors: List[str] = []
+class TranscriptionResponse(BaseModel):
+    transcript: str
+    detected_language: str
+    status: str
